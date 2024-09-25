@@ -1,0 +1,75 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+library(readxl)
+library(xtable)
+library(GGally)
+```
+
+
+```{r}
+url <- "https://github.com/Y0rkShire/ME731_P1/raw/refs/heads/main/dados.xlsx"
+temp_file <- tempfile(fileext = ".xlsx")
+download.file(url, temp_file, mode = "wb")
+dados <- read_excel(temp_file)
+
+dados <- dados[complete.cases(dados),]
+
+x <- as.matrix(dados[4:14])
+intercept <- matrix(1, nrow = nrow(x), ncol = 1)
+x <- cbind(intercept, x)
+colnames(x)[1] <- "Intercept"
+
+y <- as.matrix(dados[15:18])
+
+beta <- solve(t(x)%*%x) %*% t(x) %*% y
+
+latex_table <- xtable(beta)
+
+e_hat <- y - x %*% beta
+
+s_2 <- t(e_hat) %*% e_hat
+
+par(mfrow = c(2, 2), mar = c(3, 3, 3, 1))  
+qqnorm(e_hat[,1], xlab = "", ylab = "", main = "", pch = 19, cex = 0.8)  # Pontos mais visíveis
+qqline(e_hat[,1], col = "red", lwd = 1)  
+title(expression("Q-Q Plot de" ~ epsilon[MEDIA_5]), cex.main = 1.2) 
+qqnorm(e_hat[,2], xlab = "", ylab = "", main = "", pch = 19, cex = 0.8)
+qqline(e_hat[,2], col = "red", lwd = 1)
+title(expression("Q-Q Plot de" ~ epsilon[MEDIA_9]), cex.main = 1.2)
+qqnorm(e_hat[,3], xlab = "", ylab = "", main = "", pch = 19, cex = 0.8)
+qqline(e_hat[,3], col = "red", lwd = 1)
+title(expression("Q-Q Plot de" ~ epsilon[MEDIA_12]), cex.main = 1.2)
+qqnorm(e_hat[,4], xlab = "", ylab = "", main = "", pch = 19, cex = 0.8)
+qqline(e_hat[,4], col = "red", lwd = 1)
+title(expression("Q-Q Plot de" ~ epsilon[TAXA]), cex.main = 1.2)
+par(mfrow = c(1, 1))
+
+a <- data.frame()
+for (i in c(1:4)) {
+  a[i,1] <- ks.test(e_hat[,i],'pnorm')$p.value
+  a[i,2] <- shapiro.test(e_hat[,i])$p.value
+}
+rownames(a) <- c("e_1","e_2","e_3","e_4")
+colnames(a) <- c("p-valor KS","p-valor SW")
+latex_table <- xtable(a)
+
+panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...) {
+    usr <- par("usr")
+    on.exit(par(usr))
+    par(usr = c(0, 1, 0, 1))
+    Cor <- abs(cor(x, y))
+    txt <- paste0(prefix, format(c(Cor, 0.123456789), digits = digits)[1])
+    if(missing(cex.cor)) {
+        cex.cor <- 0.4 / strwidth(txt)
+    }
+    text(0.5, 0.5, txt,
+         cex = 1 + cex.cor * Cor) 
+}
+pairs(y,
+      upper.panel = panel.cor,    
+      lower.panel = panel.smooth) 
+```
+
